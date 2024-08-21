@@ -9,11 +9,11 @@ if(!Array.isArray) {
   };
 }
 
-var url = Npm.require('url');
+const url = Npm.require('url');
 
-var feedHandlers = {};
+const feedHandlers = {};
 
-var nameFollowsConventions = function(name) {
+const nameFollowsConventions = function(name) {
   // TODO: Expand check to follow URI name specs or test name to follow
   // Meteor.Collection naming convention
   return name === '' + name;
@@ -52,12 +52,12 @@ RssFeed = {
   },
   objectToXML: function(sourceObject) {
     // The returning string
-    var result = '';
+    let result = '';
 
     // We do a one level iteration of the object
-    for (var key in sourceObject) {
+    for (const key in sourceObject) {
       if (sourceObject.hasOwnProperty(key)) {
-        var value = sourceObject[key];
+        let value = sourceObject[key];
         // We create <key>value</key>
         if (typeof value === 'object') {
           // If date
@@ -65,16 +65,14 @@ RssFeed = {
             // We extract the date into correct format
             // If Date we produce the formatted date Mon, 06 Sep 2009 16:20:00 +0000
             result += this.createTag(key, value.toUTCString());
-          } else {
-            if (Array.isArray(value)) {
-              // If array we repeat the tag n times with values?
-              for (var i = 0; i < value.length; i++) {
-                result += this.createTag(key, this.objectToXML(value[i]));
-              }
-            } else {
-              // If objects we do nothing - one could create nested xml?
-              result += this.createTag(key, this.objectToXML(value));
+          } else if (Array.isArray(value)) {
+            // If array we repeat the tag n times with values?
+            for (const item of value) {
+              result += this.createTag(key, this.objectToXML(item));
             }
+          } else {
+            // If objects we do nothing - one could create nested xml?
+            result += this.createTag(key, this.objectToXML(value));
           }
 
         } else {
@@ -97,16 +95,16 @@ RssFeed = {
 
 // Handle the actual connection
 WebApp.connectHandlers.use(async function(req, res, next) {
-  rssurl = /^\/rss/gi;
+  const rssurl = /^\/rss/gi;
 
   if (!rssurl.test(req.url)) {
     return next();
   }
 
-  var parsed = url.parse(req.url, true);
-  var folders = parsed.pathname.split('/');
+  const parsed = url.parse(req.url, true);
+  const folders = parsed.pathname.split('/');
 
-  feedName = folders[2];
+  const feedName = folders[2];
 
   // If feedHandler not found or somehow the feedhandler is not a function then
   // return a 404
@@ -116,7 +114,7 @@ WebApp.connectHandlers.use(async function(req, res, next) {
     return;
   }
 
-  var self = {
+  const self = {
     query: parsed.query,
     res: res
   };
@@ -127,7 +125,7 @@ WebApp.connectHandlers.use(async function(req, res, next) {
           // We fetch feed data from feedHandler, the handler uses the this.addItem()
       // function to populate the feed, this way we have better check control and
       // better error handling + messages
-      var feedObject = {
+      const feedObject = {
         channel: {
           title:'',
           description:'',
@@ -140,7 +138,7 @@ WebApp.connectHandlers.use(async function(req, res, next) {
         }
       };
   
-      var feedScope = {
+      const feedScope = {
         cdata: RssFeed.cdataValue,
         setValue: function(key, value) {
           feedObject.channel[key] = value;
@@ -152,12 +150,12 @@ WebApp.connectHandlers.use(async function(req, res, next) {
   
       await feedHandlers[feedName].apply(feedScope, [self.query]);
   
-      var feed = '<?xml version="1.0" encoding="UTF-8" ?>\n';
+      let feed = '<?xml version="1.0" encoding="UTF-8" ?>\n';
       feed += '<rss version="2.0">';
       feed += RssFeed.objectToXML(feedObject);
       feed += '</rss>';
 
-      var feedBuffer = new Buffer(feed);
+      const feedBuffer = Buffer.from(feed);
 
       self.res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
       self.res.setHeader('Content-Length', feedBuffer.length);
@@ -171,6 +169,4 @@ WebApp.connectHandlers.use(async function(req, res, next) {
     res.end();
     throw new Error('Error in feed handler function, name ' + feedName + ' Error: ' + err.message);
   }
-
-  return;
 });
