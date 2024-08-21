@@ -96,7 +96,7 @@ RssFeed = {
 
 
 // Handle the actual connection
-WebApp.connectHandlers.use(function(req, res, next) {
+WebApp.connectHandlers.use(async function(req, res, next) {
   rssurl = /^\/rss/gi;
 
   if (!rssurl.test(req.url)) {
@@ -122,53 +122,50 @@ WebApp.connectHandlers.use(function(req, res, next) {
   };
 
   // Helper functions this scope
-  Fiber = Npm.require('fibers');
-  fileHandler = Fiber(function(self) {
-    // We fetch feed data from feedHandler, the handler uses the this.addItem()
-    // function to populate the feed, this way we have better check control and
-    // better error handling + messages
+  
+  const fileHandler = async function(self) {
+          // We fetch feed data from feedHandler, the handler uses the this.addItem()
+      // function to populate the feed, this way we have better check control and
+      // better error handling + messages
+      var feedObject = {
+        channel: {
+          title:'',
+          description:'',
+          link: '',
+          lastBuildDate: '',
+          pubDate: '',
+          ttl: '',
+          generator: 'Meteor RSS Feed',
+          item: [] // title, description, link, guid, pubDate
+        }
+      };
+  
+      var feedScope = {
+        cdata: RssFeed.cdataValue,
+        setValue: function(key, value) {
+          feedObject.channel[key] = value;
+        },
+        addItem: function(itemObject) {
+          feedObject.channel.item.push(itemObject);
+        }
+      };
+  
+      await feedHandlers[feedName].apply(feedScope, [self.query]);
+  
+      var feed = '<?xml version="1.0" encoding="UTF-8" ?>\n';
+      feed += '<rss version="2.0">';
+      feed += RssFeed.objectToXML(feedObject);
+      feed += '</rss>';
 
-    var feedObject = {
-      channel: {
-        title:'',
-        description:'',
-        link: '',
-        lastBuildDate: '',
-        pubDate: '',
-        ttl: '',
-        generator: 'Meteor RSS Feed',
-        item: [] // title, description, link, guid, pubDate
-      }
-    };
+      var feedBuffer = new Buffer(feed);
 
-    var feedScope = {
-      cdata: RssFeed.cdataValue,
-      setValue: function(key, value) {
-        feedObject.channel[key] = value;
-      },
-      addItem: function(itemObject) {
-        feedObject.channel.item.push(itemObject);
-      }
-    };
-
-    feedHandlers[feedName].apply(feedScope, [self.query]);
-
-    var feed = '<?xml version="1.0" encoding="UTF-8" ?>\n';
-    feed += '<rss version="2.0">';
-    feed += RssFeed.objectToXML(feedObject);
-    feed += '</rss>';
-
-
-    var feedBuffer = new Buffer(feed);
-
-    self.res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
-    self.res.setHeader('Content-Length', feedBuffer.length);
-    self.res.end(feedBuffer);
-
-  });
+      self.res.setHeader('Content-Type', 'application/rss+xml; charset=utf-8');
+      self.res.setHeader('Content-Length', feedBuffer.length);
+      self.res.end(feedBuffer);
+  }
   // Run feed handler
   try {
-    fileHandler.run(self);
+    await fileHandler(self);
   } catch(err) {
     res.writeHead(404);
     res.end();

@@ -1,15 +1,17 @@
 Package.describe({
-  name: 'raix:rssfeed',
-  version: '0.0.5',
-  summary: 'Adds basic support for rss feed v2.0'
+    name: 'sbb:rss',
+    version: '1.0.0.alpha',
+    summary: "Adds basic support for rss feed v2.0\n"+
+         "\u001b[32mv0.0.1\n"+
+         "\u001b[33m-----------------------------------------\n"+
+         "\u001b[0m Adds basic support for rss feed v2.0     \n"+
+         "\u001b[0m                                          \n"+
+         "\u001b[33m-------------------------------------RaiX\n"
 });
 
-Package.on_use(function (api) {
-    
-  api.versionsFrom('1.0');
-
+Package.onUse(function (api) {
   api.use('webapp', 'server');
-  api.add_files('rss.server.js', 'server');
+  api.addFiles('rss.server.js', 'server');
 
   api.export('RssFeed');
 
